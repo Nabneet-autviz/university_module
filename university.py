@@ -14,7 +14,7 @@ class New_Linkedin_Scrapper:
     
     def __init__(self, data):
         self.driver = webdriver.Chrome()
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 30)
 
         self.json_data = data
 
@@ -107,6 +107,7 @@ class New_Linkedin_Scrapper:
                 self.save_job(job_url)
             else:
                 self.apply_to_job(job_url)
+
     def save_job(self,job_url):
         self.driver.get(job_url)
         sleep(5)
@@ -166,13 +167,15 @@ class New_Linkedin_Scrapper:
         except:
             pass
 
-        self.useful_button("next")
-        sleep(2)
+        try:
+            self.useful_button("next")
+            sleep(2)
+        except:
+            pass
 
         try:
             self.useful_button("next")
             sleep(2)
-            print("Clicked on next button.")
         except:
             pass
 
@@ -229,7 +232,8 @@ class New_Linkedin_Scrapper:
  
     def auto_answers(self, checking_all_form_fields):
         question_data = []
-        failed_questions = []  
+        failed_questions = []
+        dropdown_and_radio_ques_with_answer = []  
         for form_fields in range(len(checking_all_form_fields)):
 
             try:
@@ -239,9 +243,18 @@ class New_Linkedin_Scrapper:
                     quest = self.driver.find_elements(By.CLASS_NAME, "jobs-easy-apply-form-section__grouping")[form_fields].find_element(By.TAG_NAME, "legend").text.lower()
 
                     quest= quest.split('\n')[0]
+                    
+                    labels = self.driver.find_elements(By.CLASS_NAME, "jobs-easy-apply-form-section__grouping")[form_fields].find_elements(By.TAG_NAME, "label")
 
+                    answers =[]
+                    for label in labels:
+                        answer = label.get_attribute("data-test-text-selectable-option__label")
+                        
+                        answers.append(answer)
+                    
                     question_data.append({"type":radio_attr,"question": quest})                    
                     
+                    dropdown_and_radio_ques_with_answer.append({"type":radio_attr,"question": quest,"answer":answers})
                     answer = self.get_answer_from_json(radio_attr, quest)
 
                     if answer is not False:
@@ -268,6 +281,22 @@ class New_Linkedin_Scrapper:
                     quest= quest.split('\n')[0]
 
                     question_data.append({"type":"select","question": quest})
+
+                    select_element = self.driver.find_elements(By.CLASS_NAME, "jobs-easy-apply-form-section__grouping")[form_fields].find_element(By.TAG_NAME, "select")
+
+                    dropdown = []
+                    
+                    options = select_element.find_elements(By.TAG_NAME, "option")
+
+                    for option in options:
+                        answer = option.text
+                        if answer == 'Select an option':
+                            pass
+                        else:
+                            dropdown.append(answer)
+                            print("302 Answer= ", answer)
+
+                    dropdown_and_radio_ques_with_answer.append({"type":'select',"question": quest,"answer":dropdown})
 
                     answer = self.get_answer_from_json(radio_attr, quest)
                     
@@ -312,6 +341,7 @@ class New_Linkedin_Scrapper:
                         print("jobs-easy-apply-form-section__grouping error 2521" )
 
         print("question_data=", question_data)
+        print("dropdown_and_radio_ques_with_answer",dropdown_and_radio_ques_with_answer)
 
         if failed_questions:
             print("Job not applied due to missing answers for the following questions:", failed_questions)
@@ -340,6 +370,7 @@ class New_Linkedin_Scrapper:
                                 
         except:
             pass 
+
     def upload_resume(self, api_resume_url):
         try:
             resume_url = api_resume_url
